@@ -33,13 +33,13 @@ jobs:
           fetch-depth: 0
 
       # -----------------------------------------------------------------------
-      # Step 2: Install pnpm BEFORE setup-node so the cache key is available
-      #         pnpm/action-setup must run first when using cache: 'pnpm'
+      # Step 2: Install pnpm BEFORE setup-node so the cache key is available.
+      #         NOTE: Do NOT specify 'version' here — pnpm/action-setup@v4
+      #         automatically reads the version from package.json "packageManager"
+      #         field (pnpm@12.6.0). Specifying both causes a version conflict.
       # -----------------------------------------------------------------------
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       # -----------------------------------------------------------------------
       # Step 3: Configure Node.js 20 LTS with pnpm store caching

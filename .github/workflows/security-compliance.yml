@@ -35,20 +35,20 @@ jobs:
     steps:
       # -----------------------------------------------------------------------
       # Step 1: Checkout repository for scanning
+      #         Full history needed for Gitleaks historical commit scanning
       # -----------------------------------------------------------------------
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          # Full history needed for Gitleaks historical scan
           fetch-depth: 0
 
       # -----------------------------------------------------------------------
-      # Step 2: Install pnpm BEFORE setup-node (required for cache: 'pnpm')
+      # Step 2: Install pnpm BEFORE setup-node (required for cache: 'pnpm').
+      #         NOTE: No 'version' key — pnpm/action-setup@v4 auto-reads
+      #         the version from package.json "packageManager": "pnpm@12.6.0".
       # -----------------------------------------------------------------------
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       # -----------------------------------------------------------------------
       # Step 3: Configure Node.js 20 LTS with pnpm store caching
@@ -71,10 +71,7 @@ jobs:
       #          Run `pnpm audit --fix` locally to resolve known issues.
       # -----------------------------------------------------------------------
       - name: 'Audit 1: pnpm Security Audit (High+ Severity)'
-        # --audit-level=high: fail on HIGH or CRITICAL vulnerabilities only
-        # Continue on error to collect all audit results before failing
         run: pnpm audit --audit-level=high
-        continue-on-error: false
 
       # -----------------------------------------------------------------------
       # Audit 2: License Compliance Check
