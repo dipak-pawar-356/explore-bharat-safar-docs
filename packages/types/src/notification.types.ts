@@ -319,4 +319,3 @@ export interface ProviderSendResult {
   rawResponse?: Record<string, unknown>;
   failureCode?: string;
 }
-

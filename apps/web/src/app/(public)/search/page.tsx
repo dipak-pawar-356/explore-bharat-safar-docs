@@ -2,14 +2,7 @@
 
 import * as React from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import {
-  Search,
-  Compass,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Sparkles,
-} from 'lucide-react';
+import { Search, Compass, ChevronLeft, ChevronRight, Clock, Sparkles } from 'lucide-react';
 import { SearchResultCard, SearchFacetSidebar, SearchSuggestions } from '@/components/search';
 import { Skeleton } from '@ebs/ui';
 import { SearchContext } from '@ebs/types';

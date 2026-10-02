@@ -279,7 +279,7 @@ export class NotificationService {
         prisma.notification.count({ where: { userId, isRead: false } }),
       ]);
 
-      const notifications: INotification[] = records.map((r) => ({
+      const notifications: INotification[] = records.map(r => ({
         id: r.id,
         userId: r.userId,
         type: r.type,

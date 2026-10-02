@@ -70,7 +70,7 @@ const mockSuperAdminReq = {
     roles: [UserRole.SUPER_ADMIN],
   },
   ip: '127.0.0.1',
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 } as any;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,7 +81,7 @@ const mockFinanceAdminReq = {
     roles: [UserRole.FINANCE_ADMIN],
   },
   ip: '127.0.0.1',
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 } as any;
 
 describe('AdminController — Sprint 9 Enterprise Administration Platform', () => {

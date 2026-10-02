@@ -76,7 +76,7 @@ export class NotificationDlqService {
         prisma.notificationDeadLetter.count(),
       ]);
 
-      const jobs: IDeadLetterJob[] = records.map((r) => ({
+      const jobs: IDeadLetterJob[] = records.map(r => ({
         id: r.id,
         jobId: r.jobId,
         queueName: r.queueName,
