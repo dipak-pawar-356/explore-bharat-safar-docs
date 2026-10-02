@@ -1,0 +1,16 @@
+name: Continuous Delivery — Staging Rollout
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-staging:
+    name: Build & Deploy to Staging EKS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy Gate Verification
+        run: echo "Staging automated rollout trigger"

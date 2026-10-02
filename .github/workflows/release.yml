@@ -1,0 +1,38 @@
+name: Explore Bharat Safar — Release Tagging & Changelog Automation
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Semantic Version Increment'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-tag:
+    name: Generate Semantic Version & Release Tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git Author
+        run: |
+          git config --global user.name "EBS Release Bot"
+          git config --global user.email "bot@explorebharatsafar.in"
+
+      - name: Execute Release Tag Automation Script
+        run: |
+          bash scripts/deploy/release-tag.sh ${{ github.event.inputs.bump_type }}

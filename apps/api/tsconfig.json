@@ -1,0 +1,25 @@
+{
+  "extends": "@ebs/config/typescript/nestjs.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@ebs/database": ["../../packages/database/src"],
+      "@ebs/database/*": ["../../packages/database/src/*"],
+      "@ebs/types": ["../../packages/types/src"],
+      "@ebs/types/*": ["../../packages/types/src/*"],
+      "@ebs/logger": ["../../packages/logger/src"],
+      "@ebs/logger/*": ["../../packages/logger/src/*"],
+      "@ebs/validators": ["../../packages/validators/src"],
+      "@ebs/validators/*": ["../../packages/validators/src/*"],
+      "@ebs/security-crypto": ["../../packages/security-crypto/src"],
+      "@ebs/security-crypto/*": ["../../packages/security-crypto/src/*"],
+      "@ebs/gis-core": ["../../packages/gis-core/src"],
+      "@ebs/gis-core/*": ["../../packages/gis-core/src/*"]
+    },
+    "outDir": "./dist",
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": ["src/**/*"]
+}

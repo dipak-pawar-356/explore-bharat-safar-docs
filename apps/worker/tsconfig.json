@@ -1,0 +1,21 @@
+{
+  "extends": "@ebs/config/typescript/base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "baseUrl": ".",
+    "paths": {
+      "@ebs/database": ["../../packages/database/src"],
+      "@ebs/database/*": ["../../packages/database/src/*"],
+      "@ebs/types": ["../../packages/types/src"],
+      "@ebs/types/*": ["../../packages/types/src/*"],
+      "@ebs/logger": ["../../packages/logger/src"],
+      "@ebs/logger/*": ["../../packages/logger/src/*"],
+      "@ebs/security-crypto": ["../../packages/security-crypto/src"],
+      "@ebs/security-crypto/*": ["../../packages/security-crypto/src/*"]
+    },
+    "outDir": "./dist",
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": ["src/**/*"]
+}

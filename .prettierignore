@@ -1,0 +1,12 @@
+node_modules
+dist
+.next
+.turbo
+coverage
+pnpm-lock.yaml
+*.tsbuildinfo
+*.d.ts
+.husky
+explore-bharat-safar-docs
+explore-bharat-safar-ai-docs
+docs

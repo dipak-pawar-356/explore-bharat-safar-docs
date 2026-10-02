@@ -1,0 +1,20 @@
+'use client';
+
+// Client Component — Interactive UI Boundary
+import React, { useState } from 'react';
+
+export interface {{pascalCase name}}Props {
+  initialState?: boolean;
+}
+
+export function {{pascalCase name}}({ initialState = false }: {{pascalCase name}}Props) {
+  const [isActive, setIsActive] = useState<boolean>(initialState);
+
+  return (
+    <div>
+      <button onClick={() => setIsActive(!isActive)}>
+        {isActive ? 'Active' : 'Inactive'}
+      </button>
+    </div>
+  );
+}

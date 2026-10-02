@@ -1,0 +1,110 @@
+# Explore Bharat Safar — Declarative Canary Rollout Specification
+# Reference: Argo Rollouts / Flagger Specification for Enterprise SRE
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: ebs-api-rollout
+  namespace: ebs-production
+  labels:
+    app.kubernetes.io/name: ebs-api
+    app.kubernetes.io/part-of: explore-bharat-safar
+spec:
+  replicas: 10
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ebs-api
+  strategy:
+    canary:
+      canaryService: ebs-api-canary
+      stableService: ebs-api-stable
+      trafficRouting:
+        traefik:
+          weightedTraefikService: ebs-api-weighted
+      steps:
+        # Step 1: Initial 10% Canary Weight with 15-minute observation window
+        - setWeight: 10
+        - pause: { duration: 15m }
+        # Step 2: Intermediate 50% Canary Weight with 10-minute observation window
+        - setWeight: 50
+        - pause: { duration: 10m }
+      analysis:
+        templates:
+          - templateName: ebs-canary-success-rate
+          - templateName: ebs-canary-p99-latency
+        args:
+          - name: service-name
+            value: ebs-api-canary
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ebs-api
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: api
+          image: registry.explorebharatsafar.in/ebs-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 4000
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2048Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+# Canary Metric Analysis Template: 5xx Error Rate
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: ebs-canary-success-rate
+  namespace: ebs-production
+spec:
+  metrics:
+    - name: success-rate
+      interval: 1m
+      successCondition: result[0] >= 0.995
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus-server.ebs-monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(http_requests_total{service="ebs-api-canary", status!~"5.*"}[2m]))
+            /
+            sum(rate(http_requests_total{service="ebs-api-canary"}[2m]))
+---
+# Canary Metric Analysis Template: P99 Latency
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: ebs-canary-p99-latency
+  namespace: ebs-production
+spec:
+  metrics:
+    - name: p99-latency
+      interval: 1m
+      successCondition: result[0] <= 0.500
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus-server.ebs-monitoring.svc.cluster.local:9090
+          query: |
+            histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service="ebs-api-canary"}[2m])) by (le))

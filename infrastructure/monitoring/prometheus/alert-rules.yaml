@@ -1,0 +1,65 @@
+# Explore Bharat Safar — Prometheus Alerting Rules
+# Defines P1 (Critical Outage) and P2 (Degradation) SRE Alert Thresholds
+groups:
+  - name: ebs-production-alerts
+    rules:
+      - alert: HighApiErrorRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[2m])) / sum(rate(http_requests_total[2m])) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          tier: api
+        annotations:
+          summary: "EBS API 5xx error rate exceeds 1% (current: {{ $value | humanizePercentage }})"
+          description: "Production API gateway is returning elevated 5xx responses. SRE on-call intervention required immediately."
+          runbook_url: "https://docs.explorebharatsafar.in/operations/runbooks/high-latency-triage"
+
+      - alert: P99LatencySpike
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 0.500
+        for: 5m
+        labels:
+          severity: warning
+          tier: api
+        annotations:
+          summary: "EBS API P99 latency exceeds 500ms (current: {{ $value | humanizeDuration }})"
+          description: "Elevated latency on search or map vector endpoints. Check database locks and Redis cache saturation."
+
+      - alert: DatabaseConnectionPoolSaturated
+        expr: pg_stat_activity_count / pg_settings_max_connections > 0.85
+        for: 3m
+        labels:
+          severity: critical
+          tier: database
+        annotations:
+          summary: "PostgreSQL active connection pool exceeds 85%"
+          description: "PgBouncer or RDS connections approaching exhaustion. Evaluate connection pool scaling."
+
+      - alert: RedisMemoryUsageHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          tier: cache
+        annotations:
+          summary: "Redis memory utilization exceeds 80%"
+          description: "Redis cluster cache memory approaching max threshold. Evaluate key eviction and TTL policies."
+
+      - alert: BullMQQueueBacklogHigh
+        expr: bullmq_queue_waiting_jobs > 5000
+        for: 10m
+        labels:
+          severity: warning
+          tier: workers
+        annotations:
+          summary: "BullMQ queue waiting jobs exceed 5,000 backlog"
+          description: "Worker processing throughput lag. Scale worker pod replicas via HPA."
+
+      - alert: PodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[15m]) * 60 > 2
+        for: 5m
+        labels:
+          severity: critical
+          tier: infrastructure
+        annotations:
+          summary: "Pod {{ $labels.pod }} is crash-looping in namespace {{ $labels.namespace }}"
+          description: "Container restarts detected. Inspect container logs via Loki."

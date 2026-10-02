@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ebs-production-config
+  namespace: ebs-core
+data:
+  NODE_ENV: "production"
+  PORT: "4000"
+  HOST: "0.0.0.0"
+  APP_URL: "https://explorebharatsafar.in"
+  API_URL: "https://api.explorebharatsafar.in"
+  CORS_ORIGIN: "https://explorebharatsafar.in,https://admin.explorebharatsafar.in"
+  LOG_LEVEL: "info"
+  METRICS_ENABLED: "true"
+  TRACING_ENABLED: "true"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.ebs-monitoring.svc.cluster.local:4317"
+  RATE_LIMIT_TTL: "60"
+  RATE_LIMIT_MAX: "150"

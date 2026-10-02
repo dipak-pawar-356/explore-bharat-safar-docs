@@ -1,0 +1,51 @@
+# Explore Bharat Safar — HashiCorp Vault Agent / External Secrets Mapping
+apiVersion: external-secrets.io/v1beta1
+kind: SecretStore
+metadata:
+  name: ebs-vault-backend
+  namespace: ebs-production
+spec:
+  provider:
+    vault:
+      server: "https://vault.internal.explorebharatsafar.in:8200"
+      path: "secret"
+      version: "v2"
+      auth:
+        kubernetes:
+          mountPath: "kubernetes"
+          role: "ebs-workload-role"
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: ebs-api-secrets
+  namespace: ebs-production
+spec:
+  refreshInterval: "1h"
+  secretStoreRef:
+    name: ebs-vault-backend
+    kind: SecretStore
+  target:
+    name: ebs-api-secrets
+    creationPolicy: Owner
+  data:
+    - secretKey: DATABASE_URL
+      remoteRef:
+        key: production/database
+        property: connection_string
+    - secretKey: REDIS_URL
+      remoteRef:
+        key: production/redis
+        property: connection_string
+    - secretKey: JWT_ACCESS_SECRET
+      remoteRef:
+        key: production/auth
+        property: jwt_access_secret
+    - secretKey: JWT_REFRESH_SECRET
+      remoteRef:
+        key: production/auth
+        property: jwt_refresh_secret
+    - secretKey: RAZORPAY_KEY_SECRET
+      remoteRef:
+        key: production/payment
+        property: razorpay_secret

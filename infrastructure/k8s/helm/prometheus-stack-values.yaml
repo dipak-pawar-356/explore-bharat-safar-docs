@@ -1,0 +1,17 @@
+# kube-prometheus-stack Helm Values
+prometheus:
+  prometheusSpec:
+    retention: 30d
+    serviceMonitorSelectorNilUsesHelmValues: false
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3
+          resources:
+            requests:
+              storage: 100Gi
+grafana:
+  adminPassword: 'change_me_in_vault'
+  persistence:
+    enabled: true
+    size: 20Gi

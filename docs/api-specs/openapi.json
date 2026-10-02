@@ -1,0 +1,20 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Explore Bharat Safar — API Gateway",
+    "version": "1.0.0",
+    "description": "Enterprise RESTful API Level 3 Specification for Explore Bharat Safar"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "System Health Status",
+        "responses": {
+          "200": {
+            "description": "System operational"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="100%" height="100%">
+  <defs>
+    <linearGradient id="emblemGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D97706" />
+      <stop offset="100%" stop-color="#C2410C" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="72" height="72" rx="18" fill="url(#emblemGrad)" />
+  <circle cx="40" cy="40" r="22" fill="none" stroke="#FFFFFF" stroke-width="3.5" />
+  <circle cx="40" cy="40" r="5" fill="#FFFFFF" />
+  <path d="M40 18 L40 26 M40 54 L40 62 M18 40 L26 40 M54 40 L62 40" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" />
+  <path d="M24 24 L30 30 M50 50 L56 56 M24 56 L30 50 M50 30 L56 24" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" />
+</svg>

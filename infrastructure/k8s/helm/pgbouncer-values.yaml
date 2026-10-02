@@ -1,0 +1,12 @@
+# PgBouncer Transaction Pooling Helm Values
+replicaCount: 3
+config:
+  poolMode: transaction
+  maxClientConn: 5000
+  defaultPoolSize: 50
+  reservePoolSize: 10
+  serverIdleTimeout: 600
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi

@@ -1,0 +1,1067 @@
+// Explore Bharat Safar — Enterprise Relational & Spatial Database Schema
+// Conforms to EBS-DOC-10-DATA & EBS-DOC-03-ARCH
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema", "postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["identity_schema", "geo_spatial_schema", "rural_bharat_schema", "booking_schema", "payment_schema", "certificate_schema", "social_schema", "audit_schema", "admin_schema", "notification_schema"]
+}
+
+// ==========================================
+// 1. IDENTITY & IAM SCHEMA
+// ==========================================
+
+model User {
+  id                   String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                String     @unique @db.VarChar(255)
+  passwordHash         String     @map("password_hash") @db.VarChar(255)
+  phoneNumber          String?    @unique @map("phone_number") @db.VarChar(20)
+  emailVerifiedAt      DateTime?  @map("email_verified_at") @db.Timestamptz()
+  phoneVerifiedAt      DateTime?  @map("phone_verified_at") @db.Timestamptz()
+  status               String     @default("ACTIVE") @db.VarChar(50)
+  failedLoginAttempts  Int        @default(0) @map("failed_login_attempts")
+  lockedUntil          DateTime?  @map("locked_until") @db.Timestamptz()
+  createdAt            DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt            DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt            DateTime?  @map("deleted_at") @db.Timestamptz()
+
+  // Relations
+  userRoles            UserRole[]
+  refreshTokens        RefreshToken[]
+  emailVerifications   EmailVerification[]
+  passwordResets       PasswordReset[]
+  auditLogs            AuditLog[]
+  bookings             Booking[]
+  profile              TravellerProfile?
+  assignedVillages     Village[]          @relation("VillageAdmin")
+  submittedUpdates     VillageUpdateStaging[] @relation("SubmittedUpdates")
+  reviewedUpdates      VillageUpdateStaging[] @relation("ReviewedUpdates")
+  notifications        Notification[]
+  notificationPref     NotificationPreference?
+  deviceTokens         NotificationDeviceToken[]
+
+  @@index([email], name: "idx_users_email_active")
+  @@index([phoneNumber], name: "idx_users_phone")
+  @@map("users")
+  @@schema("identity_schema")
+}
+
+model Role {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String     @unique @db.VarChar(50)
+  name        String     @db.VarChar(100)
+  description String?
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+
+  userRoles   UserRole[]
+
+  @@map("roles")
+  @@schema("identity_schema")
+}
+
+model UserRole {
+  userId     String   @map("user_id") @db.Uuid
+  roleId     String   @map("role_id") @db.Uuid
+  assignedAt DateTime @default(now()) @map("assigned_at") @db.Timestamptz()
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+  @@schema("identity_schema")
+}
+
+model RefreshToken {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  token             String    @unique @db.VarChar(255)
+  expiresAt         DateTime  @map("expires_at") @db.Timestamptz()
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz()
+  deviceFingerprint String?   @map("device_fingerprint") @db.VarChar(255)
+  replacedByToken   String?   @map("replaced_by_token") @db.VarChar(255)
+  familyId          String    @default(dbgenerated("gen_random_uuid()")) @map("family_id") @db.Uuid
+
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], name: "idx_refresh_tokens_user")
+  @@index([token], name: "idx_refresh_tokens_token")
+  @@map("refresh_tokens")
+  @@schema("identity_schema")
+}
+
+model EmailVerification {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  token     String    @unique @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz()
+  usedAt    DateTime? @map("used_at") @db.Timestamptz()
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("email_verifications")
+  @@schema("identity_schema")
+}
+
+model PasswordReset {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  token     String    @unique @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz()
+  usedAt    DateTime? @map("used_at") @db.Timestamptz()
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("password_resets")
+  @@schema("identity_schema")
+}
+
+// ==========================================
+// 2. GEO-SPATIAL SCHEMA (BHARAT DISCOVERY ENGINE)
+// ==========================================
+
+model State {
+  id                String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String     @unique @db.VarChar(100)
+  isoCode           String     @unique @map("iso_code") @db.VarChar(10)
+  capital           String     @db.VarChar(100)
+  officialLanguages String[]   @map("official_languages")
+  overviewDossier   Json       @map("overview_dossier")
+  createdAt         DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt         DateTime?  @map("deleted_at") @db.Timestamptz()
+
+  districts         District[]
+
+  @@map("states")
+  @@schema("geo_spatial_schema")
+}
+
+model District {
+  id                 String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stateId            String     @map("state_id") @db.Uuid
+  name               String     @db.VarChar(100)
+  headquarters       String     @db.VarChar(100)
+  emergencyDirectory Json       @map("emergency_directory")
+  createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt          DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt          DateTime?  @map("deleted_at") @db.Timestamptz()
+
+  state              State      @relation(fields: [stateId], references: [id], onDelete: Restrict)
+  talukas            Taluka[]
+
+  @@unique([stateId, name], name: "uq_state_district")
+  @@map("districts")
+  @@schema("geo_spatial_schema")
+}
+
+model Taluka {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  districtId String     @map("district_id") @db.Uuid
+  name       String     @db.VarChar(100)
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt  DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt  DateTime?  @map("deleted_at") @db.Timestamptz()
+
+  district   District   @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  places     Place[]
+  villages   Village[]
+
+  @@unique([districtId, name], name: "uq_district_taluka")
+  @@map("talukas")
+  @@schema("geo_spatial_schema")
+}
+
+model Category {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug       String     @unique @db.VarChar(100)
+  name       String     @db.VarChar(100)
+  iconToken  String     @map("icon_token") @db.VarChar(50)
+  parentId   String?    @map("parent_id") @db.Uuid
+
+  parent     Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children   Category[] @relation("CategoryHierarchy")
+
+  @@map("categories")
+  @@schema("geo_spatial_schema")
+}
+
+model Place {
+  id                 String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  talukaId           String       @map("taluka_id") @db.Uuid
+  name               String       @db.VarChar(255)
+  slug               String       @unique @db.VarChar(255)
+  categoryIds        String[]     @map("category_ids") @db.Uuid
+  elevationMeters    Int?         @map("elevation_meters")
+  historicalOverview String       @map("historical_overview")
+  architectureNotes  String?      @map("architecture_notes")
+  operatingHours     Json?        @map("operating_hours")
+  entryTariffs       Json?        @map("entry_tariffs")
+  isBookingEnabled   Boolean      @default(false) @map("is_booking_enabled")
+  linkedExperienceId String?      @map("linked_experience_id") @db.Uuid
+  averageRating      Decimal      @default(0.00) @map("average_rating") @db.Decimal(3, 2)
+  reviewCount        Int          @default(0) @map("review_count")
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt          DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt          DateTime?    @map("deleted_at") @db.Timestamptz()
+
+  taluka             Taluka       @relation(fields: [talukaId], references: [id], onDelete: Restrict)
+  landmark3D         Landmark3D?
+  experiences        Experience[]
+
+  @@index([talukaId], name: "idx_places_taluka")
+  @@map("places")
+  @@schema("geo_spatial_schema")
+}
+
+model Landmark3D {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  placeId          String   @unique @map("place_id") @db.Uuid
+  name             String   @db.VarChar(100)
+  modelAssetUri    String   @map("model_asset_uri") @db.VarChar(512)
+  renderScale      Decimal  @default(1.00) @map("render_scale") @db.Decimal(4, 2)
+  boundingRadiusPx Int      @default(48) @map("bounding_radius_px")
+
+  place            Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@map("landmarks_3d")
+  @@schema("geo_spatial_schema")
+}
+
+// ==========================================
+// 3. RURAL BHARAT SCHEMA (VILLAGE KNOWLEDGE SYSTEM)
+// ==========================================
+
+model Village {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  talukaId             String                 @map("taluka_id") @db.Uuid
+  lgdCode              String                 @unique @map("lgd_code") @db.VarChar(20)
+  nameEn               String                 @map("name_en") @db.VarChar(150)
+  nameLocal            String                 @map("name_local") @db.VarChar(150)
+  pincode              String                 @db.VarChar(10)
+  populationCount      Int?                   @default(0) @map("population_count")
+  elevationMeters      Int?                   @map("elevation_meters")
+  historicalChronicles String?                @map("historical_chronicles")
+  etymologyMeaning     String?                @map("etymology_meaning")
+  approvalStatus       String                 @default("PUBLISHED") @map("approval_status") @db.VarChar(50)
+  assignedAdminUserId  String?                @map("assigned_admin_user_id") @db.Uuid
+  createdAt            DateTime               @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt            DateTime               @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt            DateTime?              @map("deleted_at") @db.Timestamptz()
+
+  taluka               Taluka                 @relation(fields: [talukaId], references: [id], onDelete: Restrict)
+  assignedAdmin        User?                  @relation("VillageAdmin", fields: [assignedAdminUserId], references: [id], onDelete: SetNull)
+  panchayat            VillagePanchayat?
+  stagingUpdates       VillageUpdateStaging[]
+
+  @@index([pincode], name: "idx_villages_pincode")
+  @@index([talukaId], name: "idx_villages_taluka")
+  @@map("villages")
+  @@schema("rural_bharat_schema")
+}
+
+model VillagePanchayat {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  villageId          String   @unique @map("village_id") @db.Uuid
+  gramPanchayatName  String   @map("gram_panchayat_name") @db.VarChar(150)
+  gramSevakName      String?  @map("gram_sevak_name") @db.VarChar(150)
+  officePhone        String?  @map("office_phone") @db.VarChar(50)
+  officeAddress      String?  @map("office_address")
+  officeTimings      String?  @map("office_timings") @db.VarChar(100)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  village            Village  @relation(fields: [villageId], references: [id], onDelete: Cascade)
+
+  @@map("village_panchayats")
+  @@schema("rural_bharat_schema")
+}
+
+model VillageUpdateStaging {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  villageId      String    @map("village_id") @db.Uuid
+  submittedBy    String    @map("submitted_by") @db.Uuid
+  updateType     String    @map("update_type") @db.VarChar(100)
+  payload        Json
+  status         String    @default("PENDING_APPROVAL") @db.VarChar(50)
+  reviewedBy     String?   @map("reviewed_by") @db.Uuid
+  reviewComments String?   @map("review_comments")
+  submittedAt    DateTime  @default(now()) @map("submitted_at") @db.Timestamptz()
+  reviewedAt     DateTime? @map("reviewed_at") @db.Timestamptz()
+
+  village        Village   @relation(fields: [villageId], references: [id], onDelete: Cascade)
+  submitter      User      @relation("SubmittedUpdates", fields: [submittedBy], references: [id], onDelete: Cascade)
+  reviewer       User?     @relation("ReviewedUpdates", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([status], name: "idx_village_staging_pending")
+  @@map("village_updates_staging")
+  @@schema("rural_bharat_schema")
+}
+
+// ==========================================
+// 4. BOOKING & EXPERIENCES SCHEMA
+// ==========================================
+
+model Experience {
+  id                          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  placeId                     String?   @map("place_id") @db.Uuid
+  title                       String    @db.VarChar(255)
+  slug                        String    @unique @db.VarChar(255)
+  experienceType              String    @map("experience_type") @db.VarChar(50)
+  difficultyLevel             String    @map("difficulty_level") @db.VarChar(50)
+  maxAltitudeMeters           Int?      @map("max_altitude_meters")
+  basePrice                   Decimal   @map("base_price") @db.Decimal(10, 2)
+  mandatoryUpfrontPercentage  Int       @default(25) @map("mandatory_upfront_percentage")
+  inclusions                  String[]
+  exclusions                  String[]
+  itineraryDaywise            Json      @map("itinerary_daywise")
+  isActive                    Boolean   @default(true) @map("is_active")
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt                   DateTime? @map("deleted_at") @db.Timestamptz()
+
+  place                       Place?    @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  batches                     Batch[]
+
+  @@map("experiences")
+  @@schema("booking_schema")
+}
+
+model Batch {
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  experienceId   String     @map("experience_id") @db.Uuid
+  startDate      DateTime   @map("start_date") @db.Date
+  endDate        DateTime   @map("end_date") @db.Date
+  totalCapacity  Int        @map("total_capacity")
+  availableSlots Int        @map("available_slots")
+  batchStatus    String     @default("OPEN") @map("batch_status") @db.VarChar(50)
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  experience     Experience @relation(fields: [experienceId], references: [id], onDelete: Restrict)
+  bookings       Booking[]
+
+  @@index([experienceId, startDate], name: "idx_batches_exp_date")
+  @@map("batches")
+  @@schema("booking_schema")
+}
+
+model Booking {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingNumber      String               @unique @map("booking_number") @db.VarChar(50)
+  userId             String               @map("user_id") @db.Uuid
+  batchId            String               @map("batch_id") @db.Uuid
+  totalAmount        Decimal              @map("total_amount") @db.Decimal(10, 2)
+  advanceAmountPaid  Decimal              @default(0.00) @map("advance_amount_paid") @db.Decimal(10, 2)
+  balanceAmountDue   Decimal              @map("balance_amount_due") @db.Decimal(10, 2)
+  bookingStatus      String               @default("PENDING_PAYMENT") @map("booking_status") @db.VarChar(50)
+  termsVersion       String               @map("terms_version") @db.VarChar(20)
+  termsAcceptedAt    DateTime             @map("terms_accepted_at") @db.Timestamptz()
+  createdAt          DateTime             @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt          DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  batch              Batch                @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  participants       BookingParticipant[]
+  payments           PaymentTransaction[]
+  invoices           Invoice[]
+  certificates       Certificate[]
+  paymentIntents     PaymentIntent[]
+  refundRecords      RefundRecord[]
+  ledgerEntries      TransactionLedgerEntry[]
+
+  @@index([userId], name: "idx_bookings_user")
+  @@index([bookingStatus], name: "idx_bookings_status")
+  @@map("bookings")
+  @@schema("booking_schema")
+}
+
+model BookingParticipant {
+  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId            String       @map("booking_id") @db.Uuid
+  fullName             String       @map("full_name") @db.VarChar(150)
+  age                  Int
+  gender               String       @db.VarChar(20)
+  emergencyPhone       String       @map("emergency_phone") @db.VarChar(20)
+  medicalNotes         String?      @map("medical_notes")
+  isAttendanceVerified Boolean      @default(false) @map("is_attendance_verified")
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+
+  booking              Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  certificate          Certificate?
+
+  @@map("booking_participants")
+  @@schema("booking_schema")
+}
+
+// ==========================================
+// 5. FINTECH & PAYMENT SCHEMA
+// ==========================================
+
+model PaymentTransaction {
+  id                String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId         String                   @map("booking_id") @db.Uuid
+  gatewayReference  String                   @unique @map("gateway_reference") @db.VarChar(255)
+  paymentMethod     String                   @map("payment_method") @db.VarChar(50)
+  amountPaid        Decimal                  @map("amount_paid") @db.Decimal(10, 2)
+  transactionType   String                   @map("transaction_type") @db.VarChar(50)
+  transactionStatus String                   @map("transaction_status") @db.VarChar(50)
+  gatewayPayload    Json                     @map("gateway_payload")
+  createdAt         DateTime                 @default(now()) @map("created_at") @db.Timestamptz()
+
+  booking           Booking                  @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  refunds           RefundRecord[]
+  ledgerEntries     TransactionLedgerEntry[]
+
+  @@map("payment_transactions")
+  @@schema("payment_schema")
+}
+
+model Invoice {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceNumber String   @unique @map("invoice_number") @db.VarChar(50)
+  bookingId     String   @map("booking_id") @db.Uuid
+  subtotal      Decimal  @db.Decimal(10, 2)
+  cgstAmount    Decimal  @map("cgst_amount") @db.Decimal(10, 2)
+  sgstAmount    Decimal  @map("sgst_amount") @db.Decimal(10, 2)
+  grandTotal    Decimal  @map("grand_total") @db.Decimal(10, 2)
+  pdfVaultUri   String   @map("pdf_vault_uri") @db.VarChar(512)
+  issuedAt      DateTime @default(now()) @map("issued_at") @db.Timestamptz()
+
+  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+
+  @@map("invoices")
+  @@schema("payment_schema")
+}
+
+model PaymentIntent {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId      String   @map("booking_id") @db.Uuid
+  orderNumber    String   @map("order_number") @db.VarChar(100)
+  amount         Decimal  @db.Decimal(10, 2)
+  currency       String   @default("INR") @db.VarChar(10)
+  provider       String   @db.VarChar(50)
+  clientSecret   String?  @map("client_secret") @db.VarChar(255)
+  gatewayOrderId String   @map("gateway_order_id") @db.VarChar(255)
+  status         String   @default("CREATED") @db.VarChar(50)
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz()
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  booking        Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([gatewayOrderId])
+  @@map("payment_intents")
+  @@schema("payment_schema")
+}
+
+model RefundRecord {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transactionId    String    @map("transaction_id") @db.Uuid
+  bookingId        String    @map("booking_id") @db.Uuid
+  gatewayRefundId  String?   @map("gateway_refund_id") @db.VarChar(255)
+  refundAmount     Decimal   @map("refund_amount") @db.Decimal(10, 2)
+  retainedFee      Decimal   @map("retained_fee") @db.Decimal(10, 2)
+  refundPercentage Int       @map("refund_percentage")
+  reason           String    @db.VarChar(500)
+  policyTier       String    @map("policy_tier") @db.VarChar(50)
+  status           String    @default("INITIATED") @db.VarChar(50)
+  processedAt      DateTime? @map("processed_at") @db.Timestamptz()
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  transaction      PaymentTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  booking          Booking            @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+
+  @@index([bookingId])
+  @@index([transactionId])
+  @@map("refund_records")
+  @@schema("payment_schema")
+}
+
+model TransactionLedgerEntry {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transactionId String?  @map("transaction_id") @db.Uuid
+  bookingId     String   @map("booking_id") @db.Uuid
+  accountType   String   @map("account_type") @db.VarChar(50)
+  entryType     String   @map("entry_type") @db.VarChar(10)
+  amount        Decimal  @db.Decimal(10, 2)
+  balanceAfter  Decimal  @map("balance_after") @db.Decimal(10, 2)
+  referenceId   String   @map("reference_id") @db.VarChar(100)
+  description   String   @db.VarChar(255)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  transaction   PaymentTransaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  booking       Booking             @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+
+  @@index([bookingId])
+  @@index([accountType])
+  @@map("transaction_ledger_entries")
+  @@schema("payment_schema")
+}
+
+model IdempotencyRecord {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  idempotencyKey  String   @unique @map("idempotency_key") @db.VarChar(128)
+  endpoint        String   @db.VarChar(255)
+  requestHash     String   @map("request_hash") @db.VarChar(64)
+  responsePayload Json     @map("response_payload")
+  statusCode      Int      @map("status_code")
+  expiresAt       DateTime @map("expires_at") @db.Timestamptz()
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([idempotencyKey])
+  @@index([expiresAt])
+  @@map("idempotency_records")
+  @@schema("payment_schema")
+}
+
+model PaymentGatewayConfig {
+  id                       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  primaryGateway           String   @default("RAZORPAY") @map("primary_gateway") @db.VarChar(50)
+  defaultAdvancePercentage Int      @default(20) @map("default_advance_percentage")
+  isFailoverEnabled        Boolean  @default(true) @map("is_failover_enabled")
+  autoRefundThresholdInr   Decimal  @default(50000.00) @map("auto_refund_threshold_inr") @db.Decimal(10, 2)
+  updatedAt                DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("payment_gateway_configs")
+  @@schema("payment_schema")
+}
+
+// ==========================================
+// 6. CERTIFICATE SCHEMA
+// ==========================================
+
+model Certificate {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  certificateNumber    String             @unique @map("certificate_number") @db.VarChar(50)
+  participantId        String             @unique @map("participant_id") @db.Uuid
+  bookingId            String             @map("booking_id") @db.Uuid
+  batchId              String?            @map("batch_id") @db.Uuid
+  userId               String?            @map("user_id") @db.Uuid
+  participantName      String             @map("participant_name") @db.VarChar(150)
+  experienceTitle      String             @map("experience_title") @db.VarChar(255)
+  experienceLocation   String?            @map("experience_location") @db.VarChar(255)
+  highestAltitudeMeters Int?              @map("highest_altitude_meters")
+  completionDate       DateTime           @map("completion_date") @db.Date
+  verificationHash     String             @map("verification_hash") @db.VarChar(64)
+  digitalSignature     String?            @map("digital_signature") @db.Text
+  qrVerificationUrl    String?            @map("qr_verification_url") @db.VarChar(512)
+  pdfVaultUri          String             @map("pdf_vault_uri") @db.VarChar(512)
+  imageVaultUri        String?            @map("image_vault_uri") @db.VarChar(512)
+  status               String             @default("ISSUED") @map("status") @db.VarChar(20)
+  reissueCount         Int                @default(0) @map("reissue_count")
+  revokedAt            DateTime?          @map("revoked_at") @db.Timestamptz()
+  revokedReason        String?            @map("revoked_reason") @db.VarChar(500)
+  revokedBy            String?            @map("revoked_by") @db.Uuid
+  issuedAt             DateTime           @default(now()) @map("issued_at") @db.Timestamptz()
+  updatedAt            DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  participant          BookingParticipant @relation(fields: [participantId], references: [id], onDelete: Restrict)
+  booking              Booking            @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  auditLogs            CertificateAuditLog[]
+
+  @@index([certificateNumber], name: "idx_certs_number")
+  @@index([bookingId], name: "idx_certs_booking")
+  @@index([batchId], name: "idx_certs_batch")
+  @@index([userId], name: "idx_certs_user")
+  @@map("certificates")
+  @@schema("certificate_schema")
+}
+
+model CertificateAuditLog {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  certificateId        String             @map("certificate_id") @db.Uuid
+  certificateNumber    String             @map("certificate_number") @db.VarChar(50)
+  action               String             @map("action") @db.VarChar(50)
+  actorId              String             @map("actor_id") @db.Uuid
+  actorRole            String             @map("actor_role") @db.VarChar(50)
+  details              Json               @map("details")
+  ipAddress            String?            @map("ip_address") @db.VarChar(45)
+  timestamp            DateTime           @default(now()) @map("timestamp") @db.Timestamptz()
+
+  certificate          Certificate        @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+
+  @@index([certificateId], name: "idx_cert_audit_cert_id")
+  @@index([certificateNumber], name: "idx_cert_audit_cert_num")
+  @@map("certificate_audit_logs")
+  @@schema("certificate_schema")
+}
+
+// ==========================================
+// 7. SOCIAL PLATFORM SCHEMA
+// ==========================================
+
+model TravellerProfile {
+  id                       String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                   String             @unique @map("user_id") @db.Uuid
+  username                 String             @unique @db.VarChar(50)
+  displayName              String             @map("display_name") @db.VarChar(100)
+  bio                      String?
+  avatarUrl                String?            @map("avatar_url")
+  coverImageUrl            String?            @map("cover_image_url")
+  homeState                String?            @map("home_state") @db.VarChar(100)
+  homeCity                 String?            @map("home_city") @db.VarChar(100)
+  spokenLanguages          String[]           @default([]) @map("spoken_languages")
+  adventureGrade           String             @default("EXPLORER") @map("adventure_grade") @db.VarChar(50)
+  visitedStatesCount       Int                @default(0) @map("visited_states_count")
+  visitedDistrictsCount    Int                @default(0) @map("visited_districts_count")
+  completedExpeditionsCount Int               @default(0) @map("completed_expeditions_count")
+  totalElevationMeters     Int                @default(0) @map("total_elevation_meters")
+  followersCount           Int                @default(0) @map("followers_count")
+  followingCount           Int                @default(0) @map("following_count")
+  isProfilePublic          Boolean            @default(true) @map("is_profile_public")
+  isSoloDiscoveryEnabled   Boolean            @default(false) @map("is_solo_discovery_enabled")
+  createdAt                DateTime           @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts                    Post[]
+  stories                  TemporaryStory[]
+  sentFollows              Follow[]           @relation("Follower")
+  receivedFollows          Follow[]           @relation("Following")
+  sentFollowRequests       FollowRequest[]    @relation("Requester")
+  receivedFollowRequests   FollowRequest[]    @relation("Target")
+  blockedUsers             UserBlock[]        @relation("Blocker")
+  blockedByUsers           UserBlock[]        @relation("Blocked")
+  mutedUsers               UserMute[]         @relation("Muter")
+  createdCommunities       Community[]        @relation("CommunityCreator")
+  communityMemberships     CommunityMember[]
+  mediaAttachments         MediaAttachment[]
+
+  @@map("traveller_profiles")
+  @@schema("social_schema")
+}
+
+model Post {
+  id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId     String           @map("profile_id") @db.Uuid
+  postType      String           @map("post_type") @db.VarChar(50)
+  title         String?          @db.VarChar(255)
+  content       String
+  mediaUris     String[]         @default([]) @map("media_uris")
+  hashtags      String[]         @default([])
+  mentions      String[]         @default([])
+  placeId       String?          @map("place_id") @db.Uuid
+  villageId     String?          @map("village_id") @db.Uuid
+  locationName  String?          @map("location_name") @db.VarChar(150)
+  visibility    String           @default("PUBLIC") @db.VarChar(50)
+  reactionCount Int              @default(0) @map("reaction_count")
+  commentCount  Int              @default(0) @map("comment_count")
+  status        String           @default("PUBLISHED") @db.VarChar(50)
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt     DateTime?        @map("deleted_at") @db.Timestamptz()
+
+  profile       TravellerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId], name: "idx_posts_profile")
+  @@index([visibility], name: "idx_posts_visibility")
+  @@index([status], name: "idx_posts_status")
+  @@map("posts")
+  @@schema("social_schema")
+}
+
+model TemporaryStory {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId   String           @map("profile_id") @db.Uuid
+  mediaUri    String           @map("media_uri") @db.VarChar(512)
+  caption     String?          @db.VarChar(255)
+  publishedAt DateTime         @default(now()) @map("published_at") @db.Timestamptz()
+  expiresAt   DateTime         @map("expires_at") @db.Timestamptz()
+  status      String           @default("ACTIVE") @db.VarChar(50)
+
+  profile     TravellerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([status, expiresAt], name: "idx_stories_active")
+  @@map("temporary_stories")
+  @@schema("social_schema")
+}
+
+model Follow {
+  followerId  String           @map("follower_id") @db.Uuid
+  followingId String           @map("following_id") @db.Uuid
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+
+  follower    TravellerProfile @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   TravellerProfile @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@map("followers")
+  @@schema("social_schema")
+}
+
+model FollowRequest {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requesterId String           @map("requester_id") @db.Uuid
+  targetId    String           @map("target_id") @db.Uuid
+  status      String           @default("PENDING") @db.VarChar(50)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  requester   TravellerProfile @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  target      TravellerProfile @relation("Target", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, targetId])
+  @@map("follow_requests")
+  @@schema("social_schema")
+}
+
+model UserBlock {
+  blockerId String           @map("blocker_id") @db.Uuid
+  blockedId String           @map("blocked_id") @db.Uuid
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+
+  blocker   TravellerProfile @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   TravellerProfile @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@map("user_blocks")
+  @@schema("social_schema")
+}
+
+model UserMute {
+  muterId   String           @map("muter_id") @db.Uuid
+  mutedId   String           @map("muted_id") @db.Uuid
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+
+  muter     TravellerProfile @relation("Muter", fields: [muterId], references: [id], onDelete: Cascade)
+
+  @@id([muterId, mutedId])
+  @@map("user_mutes")
+  @@schema("social_schema")
+}
+
+model Community {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug             String            @unique @db.VarChar(100)
+  title            String            @db.VarChar(150)
+  description      String
+  bannerUrl        String?           @map("banner_url")
+  iconUrl          String?           @map("icon_url")
+  creatorProfileId String            @map("creator_profile_id") @db.Uuid
+  rulesText        String            @map("rules_text")
+  isVerified       Boolean           @default(false) @map("is_verified")
+  memberCount      Int               @default(1) @map("member_count")
+  postCount        Int               @default(0) @map("post_count")
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  creator          TravellerProfile  @relation("CommunityCreator", fields: [creatorProfileId], references: [id], onDelete: Restrict)
+  members          CommunityMember[]
+
+  @@map("communities")
+  @@schema("social_schema")
+}
+
+model CommunityMember {
+  communityId String           @map("community_id") @db.Uuid
+  profileId   String           @map("profile_id") @db.Uuid
+  role        String           @default("MEMBER") @db.VarChar(50)
+  joinedAt    DateTime         @default(now()) @map("joined_at") @db.Timestamptz()
+
+  community   Community        @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  profile     TravellerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@id([communityId, profileId])
+  @@map("community_members")
+  @@schema("social_schema")
+}
+
+model MediaAttachment {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId       String           @map("profile_id") @db.Uuid
+  mediaUrl        String           @map("media_url")
+  mediaType       String           @default("IMAGE") @map("media_type") @db.VarChar(50)
+  mimeType        String           @map("mime_type") @db.VarChar(100)
+  sizeBytes       Int              @map("size_bytes")
+  width           Int?
+  height          Int?
+  durationSeconds Float?           @map("duration_seconds")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+
+  profile         TravellerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("media_attachments")
+  @@schema("social_schema")
+}
+
+model SocialAuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId    String   @map("actor_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  targetType String   @map("target_type") @db.VarChar(100)
+  targetId   String   @map("target_id") @db.VarChar(100)
+  ipAddress  String?  @map("ip_address") @db.VarChar(50)
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([actorId, action], name: "idx_social_audit_actor")
+  @@map("social_audit_logs")
+  @@schema("social_schema")
+}
+
+
+// ==========================================
+// 8. AUDIT SCHEMA (COMPLIANCE & GOVERNANCE)
+// ==========================================
+
+model AuditLog {
+  id         String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  module     String   @db.VarChar(50)
+  entityName String   @map("entity_name") @db.VarChar(100)
+  entityId   String   @map("entity_id") @db.VarChar(100)
+  oldValues  Json?    @map("old_values")
+  newValues  Json?    @map("new_values")
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@id([id, createdAt])
+  @@map("audit_logs")
+  @@schema("audit_schema")
+}
+
+
+// ==========================================
+// 9. ADMIN SCHEMA (GOVERNANCE & PLATFORM MANAGEMENT)
+// ==========================================
+
+model AdminAuditLog {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorUserId     String   @map("actor_user_id") @db.VarChar(255)
+  actorEmail      String   @map("actor_email") @db.VarChar(320)
+  actorRoles      String[] @map("actor_roles")
+  action          String   @db.VarChar(100)
+  resourceType    String   @map("resource_type") @db.VarChar(100)
+  resourceId      String?  @map("resource_id") @db.VarChar(255)
+  resourceLabel   String?  @map("resource_label") @db.VarChar(500)
+  changesBefore   Json?    @map("changes_before")
+  changesAfter    Json?    @map("changes_after")
+  ipAddress       String?  @map("ip_address") @db.VarChar(50)
+  userAgent       String?  @map("user_agent") @db.VarChar(500)
+  sessionId       String?  @map("session_id") @db.VarChar(255)
+  outcome         String   @db.VarChar(20)
+  failureReason   String?  @map("failure_reason") @db.VarChar(1000)
+  metadata        Json?
+
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([actorUserId], name: "idx_admin_audit_actor")
+  @@index([action], name: "idx_admin_audit_action")
+  @@index([resourceType, resourceId], name: "idx_admin_audit_resource")
+  @@index([outcome], name: "idx_admin_audit_outcome")
+  @@index([createdAt], name: "idx_admin_audit_created_at")
+  @@map("admin_audit_logs")
+  @@schema("admin_schema")
+}
+
+model SystemConfig {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key             String   @unique @db.VarChar(200)
+  displayName     String?  @map("display_name") @db.VarChar(200)
+  description     String?  @db.VarChar(1000)
+  value           String   @db.Text
+  category        String   @db.VarChar(100)
+  isReadOnly      Boolean  @default(false) @map("is_read_only")
+
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([category], name: "idx_system_config_category")
+  @@map("system_configs")
+  @@schema("admin_schema")
+}
+
+model ContentModerationQueue {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type                String    @db.VarChar(50)
+  contentId           String    @map("content_id") @db.VarChar(255)
+  contentPreview      String?   @map("content_preview") @db.VarChar(500)
+  reportedByUserId    String?   @map("reported_by_user_id") @db.VarChar(255)
+  reportReason        String?   @map("report_reason") @db.VarChar(500)
+  reportCount         Int       @default(1) @map("report_count")
+  status              String    @default("PENDING") @db.VarChar(50)
+  assignedModeratorId String?   @map("assigned_moderator_id") @db.VarChar(255)
+  moderatorNotes      String?   @map("moderator_notes") @db.VarChar(2000)
+  resolvedAt          DateTime? @map("resolved_at") @db.Timestamptz()
+
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@unique([contentId, type])
+  @@index([status], name: "idx_moderation_status")
+  @@index([type], name: "idx_moderation_type")
+  @@index([reportCount(sort: Desc)], name: "idx_moderation_report_count")
+  @@map("content_moderation_queue")
+  @@schema("admin_schema")
+}
+
+// ==========================================
+// 10. NOTIFICATION & COMMUNICATION SCHEMA
+// ==========================================
+
+model Notification {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  type            String    @db.VarChar(100)
+  category        String    @db.VarChar(50)
+  priority        String    @default("NORMAL") @db.VarChar(20)
+  title           String    @db.VarChar(255)
+  body            String    @db.Text
+  richContent     Json?     @map("rich_content")
+  actionUrl       String?   @map("action_url") @db.VarChar(500)
+  metadata        Json?
+  channels        String[]  @default(["IN_APP"]) @db.VarChar(50)
+  deliveryStatus  String    @default("PENDING") @map("delivery_status") @db.VarChar(30)
+  isRead          Boolean   @default(false) @map("is_read")
+  readAt          DateTime? @map("read_at") @db.Timestamptz()
+  isArchived      Boolean   @default(false) @map("is_archived")
+  archivedAt      DateTime? @map("archived_at") @db.Timestamptz()
+  expiresAt       DateTime? @map("expires_at") @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveryLogs    NotificationDeliveryLog[]
+
+  @@index([userId, isRead], name: "idx_notifications_user_read")
+  @@index([userId, isArchived], name: "idx_notifications_user_archived")
+  @@index([category], name: "idx_notifications_category")
+  @@index([priority], name: "idx_notifications_priority")
+  @@index([createdAt], name: "idx_notifications_created_at")
+  @@map("notifications")
+  @@schema("notification_schema")
+}
+
+model NotificationPreference {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String   @unique @map("user_id") @db.Uuid
+  channelInApp    Boolean  @default(true) @map("channel_in_app")
+  channelEmail    Boolean  @default(true) @map("channel_email")
+  channelSms      Boolean  @default(true) @map("channel_sms")
+  channelWhatsApp Boolean  @default(true) @map("channel_whatsapp")
+  channelWebPush  Boolean  @default(false) @map("channel_web_push")
+
+  catTransactional Boolean @default(true) @map("cat_transactional")
+  catSecurity     Boolean  @default(true) @map("cat_security")
+  catBooking      Boolean  @default(true) @map("cat_booking")
+  catPayment      Boolean  @default(true) @map("cat_payment")
+  catVillage      Boolean  @default(true) @map("cat_village")
+  catSocial       Boolean  @default(true) @map("cat_social")
+  catCommunity    Boolean  @default(true) @map("cat_community")
+  catMarketing    Boolean  @default(false) @map("cat_marketing")
+
+  quietHoursEnabled Boolean @default(false) @map("quiet_hours_enabled")
+  quietHoursStart   String? @default("22:00") @map("quiet_hours_start") @db.VarChar(10)
+  quietHoursEnd     String? @default("07:00") @map("quiet_hours_end") @db.VarChar(10)
+  timezone          String  @default("Asia/Kolkata") @db.VarChar(100)
+
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+  @@schema("notification_schema")
+}
+
+model NotificationTemplate {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug          String   @db.VarChar(100)
+  version       String   @default("1.0.0") @db.VarChar(20)
+  category      String   @db.VarChar(50)
+  channel       String   @db.VarChar(30)
+  titleTemplate String   @map("title_template") @db.VarChar(300)
+  bodyTemplate  String   @map("body_template") @db.Text
+  variables     String[] @default([]) @db.VarChar(100)
+  locale        String   @default("en") @db.VarChar(10)
+  isActive      Boolean  @default(true) @map("is_active")
+
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@unique([slug, version, locale, channel])
+  @@index([category], name: "idx_templates_category")
+  @@index([slug], name: "idx_templates_slug")
+  @@map("notification_templates")
+  @@schema("notification_schema")
+}
+
+model NotificationDeliveryLog {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  notificationId    String    @map("notification_id") @db.Uuid
+  channel           String    @db.VarChar(30)
+  provider          String    @db.VarChar(50)
+  providerMessageId String?   @map("provider_message_id") @db.VarChar(255)
+  status            String    @default("SENT") @db.VarChar(30)
+  attempts          Int       @default(1)
+  responseTimeMs    Int       @default(0) @map("response_time_ms")
+  errorDetails      String?   @map("error_details") @db.Text
+  dispatchedAt      DateTime  @default(now()) @map("dispatched_at") @db.Timestamptz()
+  deliveredAt       DateTime? @map("delivered_at") @db.Timestamptz()
+
+  // Relations
+  notification      Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId], name: "idx_delivery_logs_notif")
+  @@index([status], name: "idx_delivery_logs_status")
+  @@index([provider], name: "idx_delivery_logs_provider")
+  @@map("notification_delivery_logs")
+  @@schema("notification_schema")
+}
+
+model NotificationDeadLetter {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId          String    @map("job_id") @db.VarChar(255)
+  queueName      String    @map("queue_name") @db.VarChar(100)
+  notificationId String?   @map("notification_id") @db.VarChar(255)
+  payload        Json
+  failureReason  String    @map("failure_reason") @db.Text
+  stackTrace     String?   @map("stack_trace") @db.Text
+  retryCount     Int       @default(3) @map("retry_count")
+  lastAttemptAt  DateTime  @default(now()) @map("last_attempt_at") @db.Timestamptz()
+  resolvedAt     DateTime? @map("resolved_at") @db.Timestamptz()
+  resolvedBy     String?   @map("resolved_by") @db.VarChar(255)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([queueName], name: "idx_dlq_queue")
+  @@index([resolvedAt], name: "idx_dlq_resolved")
+  @@map("notification_dead_letters")
+  @@schema("notification_schema")
+}
+
+model NotificationDeviceToken {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  endpoint   String    @unique @db.VarChar(1000)
+  p256dh     String    @db.VarChar(255)
+  auth       String    @db.VarChar(255)
+  userAgent  String?   @map("user_agent") @db.VarChar(500)
+  isActive   Boolean   @default(true) @map("is_active")
+  lastUsedAt DateTime? @map("last_used_at") @db.Timestamptz()
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relations
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], name: "idx_device_tokens_user")
+  @@map("notification_device_tokens")
+  @@schema("notification_schema")
+}
+

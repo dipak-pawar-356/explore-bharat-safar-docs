@@ -1,0 +1,21 @@
+/* Explore Bharat Safar — Typography Foundation
+   Reference: EBS-DOC-06-STYLE & EBS-BLU-49-REPO Section 8 */
+
+.heading-display {
+  font-family: var(--font-display, serif);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.heading-title {
+  font-family: var(--font-sans, sans-serif);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.text-body-prose {
+  font-family: var(--font-sans, sans-serif);
+  line-height: 1.625;
+}

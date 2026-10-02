@@ -1,0 +1,18 @@
+# Explore Bharat Safar — Chaos Mesh Pod Eviction & Zero-Downtime Resilience Experiment
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: ebs-api-pod-failure-resilience
+  namespace: ebs-production
+spec:
+  action: pod-kill
+  mode: fixed
+  value: "2"
+  selector:
+    namespaces:
+      - ebs-production
+    labelSelectors:
+      app.kubernetes.io/name: ebs-api
+  scheduler:
+    cron: "@every 10m"
+  duration: "30s"

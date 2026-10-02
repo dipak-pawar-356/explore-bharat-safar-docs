@@ -1,0 +1,7 @@
+# Explore Bharat Safar — Robots Specification
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+
+Sitemap: https://explorebharatsafar.in/sitemap.xml

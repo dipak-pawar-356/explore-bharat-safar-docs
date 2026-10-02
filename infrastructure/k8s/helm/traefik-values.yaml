@@ -1,0 +1,18 @@
+# Traefik 3.0 Helm Configuration Values
+deployment:
+  replicas: 4
+ports:
+  web:
+    redirectTo: websecure
+  websecure:
+    tls:
+      enabled: true
+service:
+  type: LoadBalancer
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: 'external'
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: 'instance'
+    service.beta.kubernetes.io/aws-load-balancer-scheme: 'internet-facing'
+metrics:
+  prometheus:
+    entryPoint: metrics

@@ -1,0 +1,26 @@
+{
+  "type": "Topology",
+  "transform": {
+    "scale": [0.001, 0.001],
+    "translate": [68.1, 6.7]
+  },
+  "objects": {
+    "districts": {
+      "type": "GeometryCollection",
+      "geometries": [
+        {
+          "type": "Polygon",
+          "arcs": [[0]],
+          "properties": {
+            "district_code": "IN-MH-PUN",
+            "name": "Pune",
+            "state_code": "IN-MH"
+          }
+        }
+      ]
+    }
+  },
+  "arcs": [
+    [[0, 0], [25, 50], [-25, -50]]
+  ]
+}

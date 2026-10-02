@@ -1,0 +1,36 @@
+{
+  "name": "@ebs/worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BullMQ Distributed Background Worker Service for Explore Bharat Safar",
+  "scripts": {
+    "build": "tsc -b",
+    "start": "tsx src/worker.ts",
+    "dev": "tsx src/worker.ts",
+    "lint": "eslint src/**/*.ts",
+    "test": "tsc --noEmit",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ebs/database": "workspace:*",
+    "@ebs/logger": "workspace:*",
+    "@ebs/security-crypto": "workspace:*",
+    "@ebs/types": "workspace:*",
+    "bullmq": "^5.41.6",
+    "ioredis": "^5.5.0",
+    "pdfkit": "^0.16.0",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@ebs/config": "workspace:*",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "@types/node": "^22.13.10",
+    "@types/pdfkit": "^0.13.9",
+    "@types/qrcode": "^1.5.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  }
+}

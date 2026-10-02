@@ -1,0 +1,15 @@
+{
+  "common": {
+    "title": "Explore Bharat Safar",
+    "tagline": "National Digital Travel Discovery Ecosystem",
+    "search": "Search destinations, forts, temples, villages...",
+    "explore": "Explore",
+    "loading": "Loading..."
+  },
+  "nav": {
+    "discovery": "Discovery",
+    "villages": "Rural Bharat",
+    "treks": "Treks & Experiences",
+    "community": "Community"
+  }
+}

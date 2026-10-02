@@ -1,0 +1,43 @@
+# Explore Bharat Safar — OpenTelemetry Collector Configuration
+# Ingests OTLP traces, metrics, and logs; exports to Prometheus, Jaeger, and Loki
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 75
+    spike_limit_percentage: 20
+
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: "ebs"
+  otlp/jaeger:
+    endpoint: "jaeger-collector.ebs-monitoring.svc.cluster.local:4317"
+    tls:
+      insecure: true
+  logging:
+    verbosity: basic
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/jaeger, logging]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
+  telemetry:
+    logs:
+      level: "info"

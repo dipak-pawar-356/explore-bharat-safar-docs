@@ -1,0 +1,35 @@
+# Explore Bharat Safar — Production apps/web Next.js Standalone Container
+# Multi-stage distroless build with non-root security context
+
+# Stage 1: Build Workspace & Static Artifacts
+FROM node:20-alpine AS builder
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json tsconfig.base.json ./
+COPY packages/ ./packages/
+COPY apps/web/ ./apps/web/
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @ebs/web build
+
+# Stage 2: Distroless Production Runner
+FROM gcr.io/distroless/nodejs20-debian12:nonroot AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+COPY --from=builder --chown=nonroot:nonroot /app/apps/web/public ./apps/web/public
+COPY --from=builder --chown=nonroot:nonroot /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=nonroot:nonroot /app/apps/web/.next/static ./apps/web/.next/static
+
+USER nonroot:nonroot
+EXPOSE 3000
+
+CMD ["apps/web/server.js"]

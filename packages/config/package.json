@@ -1,0 +1,19 @@
+{
+  "name": "@ebs/config",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared configurations for ESLint, TypeScript, and Tailwind",
+  "main": "./eslint/index.js",
+  "exports": {
+    ".": "./eslint/index.js",
+    "./eslint": "./eslint/index.js",
+    "./eslint/*": "./eslint/*",
+    "./typescript/*": "./typescript/*",
+    "./tailwind/*": "./tailwind/*"
+  },
+  "files": [
+    "typescript",
+    "eslint",
+    "tailwind"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "type": "Topology",
+  "transform": {
+    "scale": [0.001, 0.001],
+    "translate": [68.1, 6.7]
+  },
+  "objects": {
+    "india_boundary": {
+      "type": "GeometryCollection",
+      "geometries": [
+        {
+          "type": "Polygon",
+          "arcs": [[0]],
+          "properties": {
+            "name": "India National Boundary",
+            "sovereignty": "Republic of India",
+            "source": "Survey of India"
+          }
+        }
+      ]
+    }
+  },
+  "arcs": [
+    [[0, 0], [100, 200], [200, 100], [-100, -100], [-200, -200]]
+  ]
+}

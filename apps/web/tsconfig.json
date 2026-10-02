@@ -1,0 +1,19 @@
+{
+  "extends": "@ebs/config/typescript/nextjs.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@ebs/types": ["../../packages/types/src"],
+      "@ebs/types/*": ["../../packages/types/src/*"],
+      "@ebs/ui": ["../../packages/ui/src"],
+      "@ebs/ui/*": ["../../packages/ui/src/*"],
+      "@ebs/gis-core": ["../../packages/gis-core/src"],
+      "@ebs/gis-core/*": ["../../packages/gis-core/src/*"],
+      "@ebs/validators": ["../../packages/validators/src"],
+      "@ebs/validators/*": ["../../packages/validators/src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

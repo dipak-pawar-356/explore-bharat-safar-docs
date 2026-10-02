@@ -1,0 +1,54 @@
+{
+  "name": "Explore Bharat Safar — Cloudflare Enterprise WAF Ruleset",
+  "description": "OWASP Core Ruleset, rate limiting, and DDoS mitigation rules",
+  "rules": [
+    {
+      "id": "ebs-owasp-sqli",
+      "action": "block",
+      "expression": "(http.request.uri.query contains \"union select\" or http.request.uri.query contains \"--\" or http.request.body.raw contains \"' OR '1'='1\")",
+      "description": "Block SQL Injection Attack Vectors"
+    },
+    {
+      "id": "ebs-owasp-xss",
+      "action": "block",
+      "expression": "(http.request.uri.query contains \"<script>\" or http.request.body.raw contains \"javascript:\" or http.request.body.raw contains \"onerror=\")",
+      "description": "Block Cross-Site Scripting (XSS) Payloads"
+    },
+    {
+      "id": "ebs-path-traversal",
+      "action": "block",
+      "expression": "(http.request.uri.path contains \"../\" or http.request.uri.path contains \"..%2f\" or http.request.uri.path contains \"/etc/passwd\")",
+      "description": "Block Path Traversal & Local File Inclusion (LFI)"
+    },
+    {
+      "id": "ebs-rate-limit-auth",
+      "action": "challenge",
+      "expression": "(http.request.uri.path eq \"/api/v1/auth/login\" or http.request.uri.path eq \"/api/v1/auth/otp/send\")",
+      "ratelimit": {
+        "characteristics": ["ip.src"],
+        "period": 60,
+        "requests_per_period": 10,
+        "mitigation_timeout": 600
+      },
+      "description": "Rate Limit Authentication & OTP Endpoints (10 req/min per IP)"
+    },
+    {
+      "id": "ebs-rate-limit-search",
+      "action": "challenge",
+      "expression": "(http.request.uri.path eq \"/api/v1/search\" or http.request.uri.path eq \"/api/v1/search/autocomplete\")",
+      "ratelimit": {
+        "characteristics": ["ip.src"],
+        "period": 60,
+        "requests_per_period": 150,
+        "mitigation_timeout": 60
+      },
+      "description": "Rate Limit Public Search Ingress (150 req/min per IP)"
+    },
+    {
+      "id": "ebs-bot-shield",
+      "action": "managed_challenge",
+      "expression": "(cf.threat_score gt 40 or cf.bot_management.score lt 20)",
+      "description": "Challenge Malicious Scrapers & Automated Bot Networks"
+    }
+  ]
+}

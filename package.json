@@ -1,0 +1,52 @@
+{
+  "name": "explore-bharat-safar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Explore Bharat Safar — National Digital Travel Discovery Ecosystem",
+  "packageManager": "pnpm@12.6.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "test:unit": "node --import tsx --test packages/*/src/*.spec.ts tooling/*/src/*.spec.ts apps/*/src/**/*.spec.ts",
+    "type-check": "turbo run type-check",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,md,json}\"",
+    "prepare": "husky || true",
+    "lint:fix": "turbo run lint -- --fix",
+    "db:migrate": "pnpm --filter @ebs/database prisma migrate dev",
+    "db:generate": "pnpm --filter @ebs/database prisma generate",
+    "db:seed": "pnpm --filter @ebs/database seed",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.7.1",
+    "@commitlint/config-conventional": "^19.7.1",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-ebs-boundaries": "workspace:*",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.5.2",
+    "tsx": "^4.23.15",
+    "turbo": "^2.4.4",
+    "typescript": "^5.8.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "argon2",
+      "prisma",
+      "msgpackr-extract"
+    ]
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

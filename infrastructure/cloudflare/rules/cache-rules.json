@@ -1,0 +1,46 @@
+{
+  "name": "Explore Bharat Safar — Cloudflare Edge CDN Cache Ruleset",
+  "description": "Tiered caching strategy for static assets, GIS TopoJSON, and dynamic API endpoints",
+  "rules": [
+    {
+      "id": "ebs-cache-immutable-static",
+      "expression": "(http.request.uri.path starts_with \"/_next/static/\" or http.request.uri.path starts_with \"/static/\" or http.request.uri.path ends_with \".woff2\" or http.request.uri.path ends_with \".svg\")",
+      "action": "cache",
+      "cache_settings": {
+        "browser_ttl": 31536000,
+        "edge_ttl": 31536000,
+        "serve_stale": { "while_updating": true, "on_error": true },
+        "cache_deception_armor": true
+      },
+      "description": "Immutable Static Assets (1 Year TTL, Serve Stale on Error)"
+    },
+    {
+      "id": "ebs-cache-gis-topojson",
+      "expression": "(http.request.uri.path starts_with \"/topojson/\" or http.request.uri.path starts_with \"/geo/vectors/\")",
+      "action": "cache",
+      "cache_settings": {
+        "browser_ttl": 604800,
+        "edge_ttl": 2592000,
+        "serve_stale": { "while_updating": true, "on_error": true }
+      },
+      "description": "Sovereign GIS TopoJSON Vector Maps (30 Days Edge TTL)"
+    },
+    {
+      "id": "ebs-cache-discovery-facets",
+      "expression": "(http.request.uri.path eq \"/api/v1/search/facets\" or http.request.uri.path eq \"/api/v1/villages/statistics\")",
+      "action": "cache",
+      "cache_settings": {
+        "browser_ttl": 60,
+        "edge_ttl": 300,
+        "serve_stale": { "while_updating": true }
+      },
+      "description": "Dynamic Aggregation Facets (5 Minutes Edge TTL with SWR)"
+    },
+    {
+      "id": "ebs-bypass-cache-sensitive",
+      "expression": "(http.request.uri.path starts_with \"/admin/\" or http.request.uri.path starts_with \"/village-admin/\" or http.request.uri.path starts_with \"/api/v1/auth/\" or http.request.uri.path starts_with \"/checkout/\")",
+      "action": "bypass_cache",
+      "description": "Strict No-Cache for Admin, Authentication, and Checkout Workflows"
+    }
+  ]
+}

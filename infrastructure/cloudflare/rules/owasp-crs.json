@@ -1,0 +1,16 @@
+{
+  "name": "EBS OWASP Core Rule Set & Rate Limiting Policy",
+  "description": "Enterprise WAF configuration enforcing OWASP Top 10 mitigation and API rate limits",
+  "rules": [
+    {
+      "action": "block",
+      "expression": "(http.request.uri.path contains \"/api/\" and rate(http.request.client_ip, 1m) > 120)",
+      "description": "Rate limit: 120 req/min per IP on API routes"
+    },
+    {
+      "action": "challenge",
+      "expression": "(http.request.uri.path contains \"/api/v1/auth/login\" and rate(http.request.client_ip, 1m) > 10)",
+      "description": "Auth brute-force mitigation: Challenge > 10 login attempts/min"
+    }
+  ]
+}

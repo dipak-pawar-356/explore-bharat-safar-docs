@@ -1,0 +1,13 @@
+{
+  "extends": "@ebs/config/typescript/base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "baseUrl": ".",
+    "paths": {
+      "@ebs/types": ["../types/src"],
+      "@ebs/types/*": ["../types/src/*"]
+    }
+  },
+  "include": ["src/**/*"]
+}

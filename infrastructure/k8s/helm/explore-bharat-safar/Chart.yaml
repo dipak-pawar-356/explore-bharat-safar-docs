@@ -1,0 +1,15 @@
+apiVersion: v2
+name: explore-bharat-safar
+description: Enterprise Production Helm Chart for Explore Bharat Safar Unified Digital Travel Ecosystem
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: Platform Engineering & DevOps Team
+    email: ops@explorebharatsafar.in
+keywords:
+  - travel
+  - gis
+  - microservices
+  - sovereign-cloud
+  - high-availability

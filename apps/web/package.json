@@ -1,0 +1,44 @@
+{
+  "name": "@ebs/web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Next.js 14 App Router Frontend for Explore Bharat Safar",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "tsc --noEmit",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ebs/gis-core": "workspace:*",
+    "@ebs/types": "workspace:*",
+    "@ebs/ui": "workspace:*",
+    "@ebs/validators": "workspace:*",
+    "@tanstack/react-query": "^5.66.11",
+    "clsx": "^2.1.1",
+    "gsap": "^3.12.7",
+    "lucide-react": "^1.16.0",
+    "next": "^14.2.24",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^3.0.2",
+    "three": "^0.174.0",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@ebs/config": "workspace:*",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.24",
+    "eslint-plugin-ebs-boundaries": "workspace:*",
+    "@types/node": "^22.13.10",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/three": "^0.174.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.2"
+  }
+}

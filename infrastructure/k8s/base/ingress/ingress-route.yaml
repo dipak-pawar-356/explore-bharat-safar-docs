@@ -1,0 +1,21 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ebs-main-ingress
+  namespace: ebs-core
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`api.explorebharatsafar.in`) || PathPrefix(`/api`)
+      kind: Rule
+      services:
+        - name: ebs-api-svc
+          port: 4000
+    - match: Host(`explorebharatsafar.in`)
+      kind: Rule
+      services:
+        - name: ebs-web-svc
+          port: 3000
+  tls:
+    secretName: ebs-wildcard-tls

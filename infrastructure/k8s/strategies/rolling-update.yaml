@@ -1,0 +1,44 @@
+# Explore Bharat Safar — Zero-Downtime Rolling Update Baseline Strategy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ebs-worker-rolling
+  namespace: ebs-production
+  labels:
+    app.kubernetes.io/name: ebs-worker
+    app.kubernetes.io/part-of: explore-bharat-safar
+spec:
+  replicas: 4
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ebs-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ebs-worker
+    spec:
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: worker
+          image: registry.explorebharatsafar.in/ebs-worker:latest
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1024Mi
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 15"]

@@ -1,0 +1,27 @@
+# Explore Bharat Safar — Global Code Ownership Governance
+# Reference: EBS-BLU-49-REPO Section 2.7 & EBS-BLU-50-WORKFLOW
+
+# Global repository owners
+* @explore-bharat-safar/core-architects
+
+# Cloud Infrastructure, Containers & Deployment
+/infrastructure/ @explore-bharat-safar/devops-sre
+/.github/ @explore-bharat-safar/devops-sre
+
+# Database & PostGIS schema
+/packages/database/ @explore-bharat-safar/database-leads
+
+# Cryptography, Security & Identity
+/packages/security-crypto/ @explore-bharat-safar/security-leads
+/apps/api/src/modules/auth/ @explore-bharat-safar/security-leads
+
+# GIS & Spatial Engines
+/packages/gis-core/ @explore-bharat-safar/gis-leads
+/apps/api/src/modules/discovery/ @explore-bharat-safar/gis-leads
+
+# Design System & UI Primitives
+/packages/ui/ @explore-bharat-safar/design-system-team
+/packages/config/tailwind/ @explore-bharat-safar/design-system-team
+
+# Architecture Boundary Enforcement & Tooling
+/tooling/ @explore-bharat-safar/architecture-council

@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 210 40% 98%;
+  --foreground: 222 47% 11%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 38 92% 50%;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: 242 47% 20%; /* Royal Indigo Slate */
+  --foreground: 210 40% 98%;
+  --muted: 242 47% 25%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --border: 242 47% 28%;
+  --input: 242 47% 28%;
+  --ring: 38 92% 50%;
+}
+
+body {
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  font-family: var(--font-sans), system-ui, sans-serif;
+  overflow-x: hidden;
+}

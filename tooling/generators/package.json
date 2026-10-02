@@ -1,0 +1,13 @@
+{
+  "name": "@ebs/generators",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Plop.js code scaffolding generators for Explore Bharat Safar",
+  "main": "plopfile.js",
+  "scripts": {
+    "generate": "plop"
+  },
+  "devDependencies": {
+    "plop": "^4.0.1"
+  }
+}

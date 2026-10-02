@@ -1,0 +1,36 @@
+{
+  "type": "Topology",
+  "transform": {
+    "scale": [0.001, 0.001],
+    "translate": [68.1, 6.7]
+  },
+  "objects": {
+    "states": {
+      "type": "GeometryCollection",
+      "geometries": [
+        {
+          "type": "Polygon",
+          "arcs": [[0]],
+          "properties": {
+            "state_code": "IN-MH",
+            "name": "Maharashtra",
+            "type": "State"
+          }
+        },
+        {
+          "type": "Polygon",
+          "arcs": [[1]],
+          "properties": {
+            "state_code": "IN-RJ",
+            "name": "Rajasthan",
+            "type": "State"
+          }
+        }
+      ]
+    }
+  },
+  "arcs": [
+    [[0, 0], [50, 100], [-50, -100]],
+    [[50, 100], [50, 50], [-50, -50]]
+  ]
+}
