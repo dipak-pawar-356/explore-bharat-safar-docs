@@ -57,6 +57,14 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # -----------------------------------------------------------------------
+      # Step 5: Generate Prisma Client Types
+      #         Generates strongly-typed Prisma models required for TypeScript
+      #         strict checks and database operations across all workspaces.
+      # -----------------------------------------------------------------------
+      - name: Generate Database Client (Prisma)
+        run: pnpm db:generate
+
+      # -----------------------------------------------------------------------
       # Gate 1: Code Formatting Check (Prettier)
       #         Fails if any file does not match Prettier formatting rules.
       #         Run `pnpm format` locally to fix formatting issues.

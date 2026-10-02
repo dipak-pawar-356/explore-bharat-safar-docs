@@ -6,7 +6,7 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "build": "tsc -b",
+    "build": "pnpm prisma:generate && tsc -b",
     "type-check": "tsc --noEmit",
     "test": "tsc --noEmit",
     "prisma:generate": "prisma generate",

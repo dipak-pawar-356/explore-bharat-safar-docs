@@ -15,8 +15,9 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,md,json}\"",
     "prepare": "husky || true",
     "lint:fix": "turbo run lint -- --fix",
-    "db:migrate": "pnpm --filter @ebs/database prisma migrate dev",
-    "db:generate": "pnpm --filter @ebs/database prisma generate",
+    "postinstall": "pnpm db:generate",
+    "db:migrate": "pnpm --filter @ebs/database prisma:migrate",
+    "db:generate": "pnpm --filter @ebs/database prisma:generate",
     "db:seed": "pnpm --filter @ebs/database seed",
     "clean": "turbo run clean"
   },
