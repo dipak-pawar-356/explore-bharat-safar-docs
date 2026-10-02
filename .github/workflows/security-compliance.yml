@@ -1,45 +1,95 @@
+# =============================================================================
+# Explore Bharat Safar — Enterprise Security, Dependency Audit & License Check
+# Reference: EBS-BLU-11-SECURITY Section 8 (Continuous Security Posture)
+#
+# Triggers: Daily at 02:00 UTC (scheduled), PRs to main, manual dispatch
+# Purpose:  Three-layer security audit:
+#           Audit 1 — pnpm Dependency Vulnerability Scan (high severity)
+#           Audit 2 — License Compliance (permissive licenses only)
+#           Audit 3 — Gitleaks Secret Scanner (prevent credential leakage)
+# =============================================================================
+
 name: Enterprise Security, Dependency Audit & License Compliance
 
 on:
+  # Run daily at 02:00 UTC to catch newly disclosed vulnerabilities
   schedule:
-    - cron: '0 2 * * *' # Daily at 02:00 UTC
+    - cron: '0 2 * * *'
+  # Run on every PR to main for early vulnerability detection
   pull_request:
     branches: [main]
+  # Allow manual triggering for ad-hoc security assessments
   workflow_dispatch:
 
 permissions:
+  # Read repository contents for scanning
   contents: read
+  # Write security events to the Security tab (SARIF upload)
   security-events: write
 
 jobs:
   security-audit:
     name: Dependency Vulnerability & License Audit
     runs-on: ubuntu-latest
+
     steps:
+      # -----------------------------------------------------------------------
+      # Step 1: Checkout repository for scanning
+      # -----------------------------------------------------------------------
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Setup Node.js 20.x
-        uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'pnpm'
+          # Full history needed for Gitleaks historical scan
+          fetch-depth: 0
 
+      # -----------------------------------------------------------------------
+      # Step 2: Install pnpm BEFORE setup-node (required for cache: 'pnpm')
+      # -----------------------------------------------------------------------
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
           version: 9
 
+      # -----------------------------------------------------------------------
+      # Step 3: Configure Node.js 20 LTS with pnpm store caching
+      # -----------------------------------------------------------------------
+      - name: Setup Node.js 20.x LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # -----------------------------------------------------------------------
+      # Step 4: Install production dependencies only for vulnerability scan
+      # -----------------------------------------------------------------------
       - name: Install Production Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Audit 1: pnpm Security Audit
-        run: pnpm audit --prod --audit-level=high
+      # -----------------------------------------------------------------------
+      # Audit 1: pnpm Security Vulnerability Audit
+      #          Fails on HIGH or CRITICAL severity advisories in prod deps.
+      #          Run `pnpm audit --fix` locally to resolve known issues.
+      # -----------------------------------------------------------------------
+      - name: 'Audit 1: pnpm Security Audit (High+ Severity)'
+        # --audit-level=high: fail on HIGH or CRITICAL vulnerabilities only
+        # Continue on error to collect all audit results before failing
+        run: pnpm audit --audit-level=high
+        continue-on-error: false
 
-      - name: Audit 2: License Compliance Check (Permissive Only)
+      # -----------------------------------------------------------------------
+      # Audit 2: License Compliance Check
+      #          Ensures only permissive licenses are used (MIT, Apache-2.0,
+      #          BSD-*, ISC). Rejects GPL, AGPL, LGPL, and unknown licenses.
+      # -----------------------------------------------------------------------
+      - name: 'Audit 2: License Compliance Check (Permissive Only)'
         run: bash scripts/security/license-compliance-check.sh
 
-      - name: Audit 3: Gitleaks Secret Scanner
+      # -----------------------------------------------------------------------
+      # Audit 3: Gitleaks Secret Scanner
+      #          Scans for accidentally committed credentials, API keys,
+      #          tokens, and other secrets in the repository history.
+      # -----------------------------------------------------------------------
+      - name: 'Audit 3: Gitleaks Secret Scanner'
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

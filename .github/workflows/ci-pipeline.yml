@@ -1,8 +1,20 @@
+# =============================================================================
+# Explore Bharat Safar — Monorepo CI Pipeline
+# Reference: EBS-BLU-50-WORKFLOW Section 4 (Quality Gates)
+#
+# Triggers: push to main / release branches, pull requests to main
+# Purpose:  Enforce 4-stage quality gate before any code reaches main:
+#           Gate 1 — Code Formatting (Prettier)
+#           Gate 2 — Static Analysis (ESLint)
+#           Gate 3 — TypeScript Strict Type Check
+#           Gate 4 — Unit & Integration Test Suites
+# =============================================================================
+
 name: Explore Bharat Safar — Monorepo CI Pipeline
 
 on:
   push:
-    branches: [main, release/*]
+    branches: [main, 'release/*']
   pull_request:
     branches: [main]
 
@@ -10,34 +22,68 @@ jobs:
   quality-gates:
     name: Lint, Type-Check & Unit Tests
     runs-on: ubuntu-latest
+
     steps:
+      # -----------------------------------------------------------------------
+      # Step 1: Checkout full history for Turborepo affected detection
+      # -----------------------------------------------------------------------
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js 20.x
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
+      # -----------------------------------------------------------------------
+      # Step 2: Install pnpm BEFORE setup-node so the cache key is available
+      #         pnpm/action-setup must run first when using cache: 'pnpm'
+      # -----------------------------------------------------------------------
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
           version: 9
 
+      # -----------------------------------------------------------------------
+      # Step 3: Configure Node.js 20 LTS with pnpm store caching
+      # -----------------------------------------------------------------------
+      - name: Setup Node.js 20.x LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # -----------------------------------------------------------------------
+      # Step 4: Install dependencies from frozen lockfile (reproducible builds)
+      # -----------------------------------------------------------------------
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Gate 1: Code Formatting Check (Prettier)
+      # -----------------------------------------------------------------------
+      # Gate 1: Code Formatting Check (Prettier)
+      #         Fails if any file does not match Prettier formatting rules.
+      #         Run `pnpm format` locally to fix formatting issues.
+      # -----------------------------------------------------------------------
+      - name: 'Gate 1: Code Formatting Check (Prettier)'
         run: pnpm format:check
 
-      - name: Gate 2: Static Analysis & ESLint
+      # -----------------------------------------------------------------------
+      # Gate 2: Static Analysis & ESLint
+      #         Runs ESLint across all workspaces via Turborepo.
+      #         Enforces custom EBS boundary rules (no-cross-domain-imports etc.)
+      # -----------------------------------------------------------------------
+      - name: 'Gate 2: Static Analysis & ESLint'
         run: pnpm lint
 
-      - name: Gate 3: Universal TypeScript Strict Check
+      # -----------------------------------------------------------------------
+      # Gate 3: Universal TypeScript Strict Check
+      #         Runs `tsc --noEmit` across all workspaces.
+      #         Zero type errors is required for merge.
+      # -----------------------------------------------------------------------
+      - name: 'Gate 3: Universal TypeScript Strict Check'
         run: pnpm type-check
 
-      - name: Gate 4: Unit Test Suites
+      # -----------------------------------------------------------------------
+      # Gate 4: Unit Test Suites
+      #         Runs all unit and integration tests via Turborepo.
+      #         Tests must pass with zero failures.
+      # -----------------------------------------------------------------------
+      - name: 'Gate 4: Unit Test Suites'
         run: pnpm test

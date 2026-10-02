@@ -1,23 +1,77 @@
+# =============================================================================
+# Explore Bharat Safar — Container Vulnerability Scan (Trivy)
+# Reference: EBS-BLU-23-DEVOPS Section 5 (Container Security)
+#
+# Triggers: push to main branch, weekly on Monday at 04:00 UTC
+# Purpose:  Scan the repository filesystem for known CVEs and misconfigurations
+#           using Aqua Security Trivy. Results are uploaded to GitHub Security
+#           tab as SARIF for centralized vulnerability tracking.
+#
+# NOTE: This scans the source filesystem (not a built Docker image) which is
+#       appropriate for the docs/monorepo repository. Container image scanning
+#       happens as part of the production-deploy.yml pipeline.
+# =============================================================================
+
 name: Container Vulnerability Scan (Trivy)
 
 on:
   push:
     branches: [main]
+  # Run weekly on Monday at 04:00 UTC for continuous security posture
   schedule:
-    - cron: '0 4 * * 1' # Weekly on Monday at 04:00 UTC
+    - cron: '0 4 * * 1'
+
+permissions:
+  # Required to upload SARIF results to the GitHub Security tab
+  security-events: write
+  # Required to read repository contents
+  contents: read
 
 jobs:
   trivy-scan:
     name: Trivy Security Scan
     runs-on: ubuntu-latest
+
     steps:
+      # -----------------------------------------------------------------------
+      # Step 1: Checkout repository for filesystem scanning
+      # -----------------------------------------------------------------------
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Run Trivy Vulnerability Scanner
-        uses: aquasecurity/trivy-action@master
+      # -----------------------------------------------------------------------
+      # Step 2: Run Trivy Filesystem Vulnerability Scanner
+      #         Scans all files for known CVEs in dependencies and
+      #         infrastructure configuration (Terraform, Kubernetes, Docker).
+      #
+      #         - format: sarif    → Upload results to GitHub Security tab
+      #         - exit-code: 0     → Never fail the build (informational scan)
+      #                              Production image scan (with exit-code: 1)
+      #                              runs in production-deploy.yml pipeline
+      #         - ignore-unfixed   → Skip vulnerabilities with no available fix
+      #         - severity: CRITICAL,HIGH → Report only critical/high findings
+      # -----------------------------------------------------------------------
+      - name: Run Trivy Filesystem Vulnerability Scanner
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
-          exit-code: '1'
+          # exit-code 0: report findings but don't block the build
+          # Container image scans with exit-code 1 run in production-deploy.yml
+          exit-code: '0'
+
+      # -----------------------------------------------------------------------
+      # Step 3: Upload Trivy SARIF results to GitHub Security tab
+      #         Allows viewing vulnerability findings in the Security > Code
+      #         scanning alerts dashboard for centralized triage.
+      # -----------------------------------------------------------------------
+      - name: Upload Trivy SARIF to GitHub Security Tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy-filesystem'

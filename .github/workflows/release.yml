@@ -1,6 +1,22 @@
+# =============================================================================
+# Explore Bharat Safar — Release Tagging & Changelog Automation
+# Reference: EBS-BLU-50-WORKFLOW Section 6 (Release Management)
+#
+# Triggers: manual workflow dispatch only (controlled release process)
+# Purpose:  Automate semantic versioning and release tag creation.
+#           Reads conventional commit history to determine version bump,
+#           creates and pushes a git tag, and generates a changelog entry.
+#
+# Usage: Go to Actions → Release Tagging → Run workflow → Choose bump type
+#        - patch: bug fixes only (1.0.x)
+#        - minor: new backward-compatible features (1.x.0)
+#        - major: breaking changes (x.0.0)
+# =============================================================================
+
 name: Explore Bharat Safar — Release Tagging & Changelog Automation
 
 on:
+  # Controlled release process — only via manual dispatch with explicit approval
   workflow_dispatch:
     inputs:
       bump_type:
@@ -9,30 +25,47 @@ on:
         default: 'patch'
         type: choice
         options:
-          - patch
-          - minor
-          - major
+          - patch  # Bug fixes: 1.0.0 → 1.0.1
+          - minor  # New features: 1.0.0 → 1.1.0
+          - major  # Breaking changes: 1.0.0 → 2.0.0
 
 permissions:
+  # Required to push tags and create releases
   contents: write
+  # Required to create pull requests for changelog updates
   pull-requests: write
 
 jobs:
   release-tag:
     name: Generate Semantic Version & Release Tag
     runs-on: ubuntu-latest
+
     steps:
+      # -----------------------------------------------------------------------
+      # Checkout full history so the release script can read all commit
+      # messages and generate accurate changelogs
+      # -----------------------------------------------------------------------
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # -----------------------------------------------------------------------
+      # Configure git author for the release commit and tag
+      # Uses a bot identity to distinguish automated releases from human commits
+      # -----------------------------------------------------------------------
       - name: Configure Git Author
         run: |
           git config --global user.name "EBS Release Bot"
           git config --global user.email "bot@explorebharatsafar.in"
 
+      # -----------------------------------------------------------------------
+      # Execute the release automation script
+      # Script reads current version from package.json, applies the bump,
+      # creates an annotated git tag, and pushes to origin.
+      # See: scripts/deploy/release-tag.sh for implementation details.
+      # -----------------------------------------------------------------------
       - name: Execute Release Tag Automation Script
         run: |
           bash scripts/deploy/release-tag.sh ${{ github.event.inputs.bump_type }}

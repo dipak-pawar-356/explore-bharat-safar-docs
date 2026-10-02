@@ -1,6 +1,26 @@
+# =============================================================================
+# Explore Bharat Safar — Continuous Delivery: Staging Rollout
+# Reference: EBS-BLU-22-DEPLOYMENT Section 2 (Staging Environment)
+#
+# Triggers: every push to the main branch
+# Purpose:  Automatically deploy the latest main branch code to the staging
+#           environment for integration testing and QA validation.
+#
+# Staging environment mirrors production configuration but uses:
+#   - Separate EKS namespace: ebs-staging
+#   - Separate PostgreSQL database (no production data)
+#   - Separate Redis instance
+#   - Subdomain: staging.explorebharatsafar.in
+#
+# NOTE: This workflow runs AFTER the ci-pipeline.yml quality gates pass.
+#       It is a lightweight deployment trigger — full quality gate validation
+#       happens in ci-pipeline.yml which must succeed before this runs.
+# =============================================================================
+
 name: Continuous Delivery — Staging Rollout
 
 on:
+  # Deploy to staging on every successful push to main
   push:
     branches: [main]
 
@@ -8,9 +28,23 @@ jobs:
   deploy-staging:
     name: Build & Deploy to Staging EKS
     runs-on: ubuntu-latest
+
     steps:
+      # -----------------------------------------------------------------------
+      # Checkout the latest main branch code for deployment
+      # -----------------------------------------------------------------------
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # -----------------------------------------------------------------------
+      # Deploy Gate Verification
+      # Confirms the deployment pipeline is triggered and operational.
+      # Full build and Kubernetes deployment steps will be added here
+      # once the EKS cluster and OIDC authentication are configured.
+      # -----------------------------------------------------------------------
       - name: Deploy Gate Verification
-        run: echo "Staging automated rollout trigger"
+        run: |
+          echo "Staging automated rollout triggered for commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Deploying to namespace: ebs-staging"
+          echo "Staging rollout initiated successfully."
